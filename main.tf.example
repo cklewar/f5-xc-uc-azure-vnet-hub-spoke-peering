@@ -36,10 +36,6 @@ variable "f5xc_api_token" {
   type    = string
 }
 
-variable "ssh_public_key_file" {
-  type    = string
-}
-
 variable "f5xc_azure_cred" {
   type    = string
   default = "sun-az-creds"
@@ -59,6 +55,28 @@ variable "azure_tenant_id" {
 
 variable "azure_subscription_id" {
   type    = string
+}
+
+variable "provisioner_connection_type" {
+  type    = string
+  default = "ssh"
+}
+
+variable "ssh_public_key_file" {
+  type    = string
+}
+
+variable "ssh_private_key_file" {
+  type    = string
+}
+
+locals {
+  script_spoke_a_content = templatefile("./templates/script.tftpl", {
+    "spoke_private_ip" = module.azure_virtual_machine_spoke_a.virtual_machine["private_ip"]
+  })
+  script_spoke_b_content = templatefile("./templates/script.tftpl", {
+    "spoke_private_ip" = module.azure_virtual_machine_spoke_b.virtual_machine["private_ip"]
+  })
 }
 
 provider "volterra" {
@@ -88,7 +106,7 @@ module "f5xc_azure_marketplace_agreement_hub_multi_nic" {
 module "azure_resource_group" {
   source                    = "./modules/azure/resource_group"
   azure_region              = var.f5xc_azure_region
-  azure_resource_group_name = format("%s-azure-vnet-rg-%s", var.project_prefix, var.project_suffix)
+  azure_resource_group_name = format("%s-azure-hub-spoke-peer-rg-%s", var.project_prefix, var.project_suffix)
   providers                 = {
     azurerm = azurerm.eastus
   }
@@ -97,7 +115,7 @@ module "azure_resource_group" {
 module "azure_vnet_spoke_a" {
   source                         = "./modules/azure/virtual_network"
   azure_region                   = var.f5xc_azure_region
-  azure_vnet_name                = format("%s-vnet-spoke-a-%s", var.project_prefix, var.project_suffix)
+  azure_vnet_name                = format("%s-spoke-a-%s", var.project_prefix, var.project_suffix)
   azure_vnet_primary_ipv4        = "172.16.20.0/22"
   azure_vnet_resource_group_name = module.azure_resource_group.resource_group["name"]
   providers                      = {
@@ -116,77 +134,106 @@ module "azure_vnet_spoke_b" {
   }
 }
 
-/*module "azure_vnet_spoke_a" {
-  depends_on                     = [module.f5xc_azure_marketplace_agreement_spoke_single_nic]
-  source                         = "./modules/f5xc/site/azure"
-  f5xc_namespace                 = var.f5xc_namespace
-  f5xc_tenant                    = var.f5xc_tenant
-  f5xc_azure_cred                = var.f5xc_azure_cred
-  f5xc_azure_region              = var.f5xc_azure_region
-  f5xc_azure_site_name           = format("%s-vnet-spoke-a-%s", var.project_prefix, var.project_suffix)
-  f5xc_azure_vnet_name           = format("%s-vnet-spoke-a-%s", var.project_prefix, var.project_suffix)
-  f5xc_azure_vnet_resource_group = format("%s-vnet-spoke-a-rg-%s", var.project_prefix, var.project_suffix)
-  f5xc_azure_vnet_primary_ipv4   = "172.16.20.0/22"
-  f5xc_azure_ce_gw_type          = "single_nic"
-  f5xc_azure_az_nodes            = {
-    node0 : { f5xc_azure_az = "1", f5xc_azure_vnet_local_subnet = "172.16.20.0/24" },
-  }
-  f5xc_azure_default_blocked_services = false
-  f5xc_azure_default_ce_sw_version    = true
-  f5xc_azure_default_ce_os_version    = true
-  f5xc_azure_no_worker_nodes          = false
-  f5xc_azure_total_worker_nodes       = 0
-  public_ssh_key                      = file(var.ssh_public_key_file)
-  providers                           = {
-    volterra = volterra.default
+module "azure_subnet_spoke_a" {
+  source                           = "./modules/azure/subnet"
+  azure_vnet_name                  = module.azure_vnet_spoke_a.vnet["name"]
+  azure_subnet_name                = format("%s-azure-subnet-spoke-b-%s", var.project_prefix, var.project_suffix)
+  azure_subnet_address_prefixes    = ["172.16.20.0/24"]
+  azure_subnet_resource_group_name = module.azure_resource_group.resource_group["name"]
+  providers                        = {
+    azurerm = azurerm.eastus
   }
 }
 
-module "azure_vnet_spoke_a_wait_for_online" {
-  depends_on     = [module.azure_vnet_spoke_a]
-  source         = "./modules/f5xc/status/site"
-  f5xc_api_token = var.f5xc_api_token
-  f5xc_api_url   = var.f5xc_api_url
-  f5xc_namespace = var.f5xc_namespace
-  f5xc_tenant    = var.f5xc_tenant
-  f5xc_site_name = format("%s-vnet-spoke-a-%s", var.project_prefix, var.project_suffix)
-}
-
-module "azure_vnet_spoke_b" {
-  depends_on                     = [module.f5xc_azure_marketplace_agreement_spoke_single_nic]
-  source                         = "./modules/f5xc/site/azure"
-  f5xc_namespace                 = var.f5xc_namespace
-  f5xc_tenant                    = var.f5xc_tenant
-  f5xc_azure_cred                = var.f5xc_azure_cred
-  f5xc_azure_region              = var.f5xc_azure_region
-  f5xc_azure_site_name           = format("%s-vnet-spoke-b-%s", var.project_prefix, var.project_suffix)
-  f5xc_azure_vnet_name           = format("%s-vnet-spoke-b-%s", var.project_prefix, var.project_suffix)
-  f5xc_azure_vnet_resource_group = format("%s-vnet-spoke-b-rg-%s", var.project_prefix, var.project_suffix)
-  f5xc_azure_vnet_primary_ipv4   = "172.16.24.0/22"
-  f5xc_azure_ce_gw_type          = "single_nic"
-  f5xc_azure_az_nodes            = {
-    node0 : { f5xc_azure_az = "1", f5xc_azure_vnet_local_subnet = "172.16.24.0/24" },
-  }
-  f5xc_azure_default_blocked_services = false
-  f5xc_azure_default_ce_sw_version    = true
-  f5xc_azure_default_ce_os_version    = true
-  f5xc_azure_no_worker_nodes          = false
-  f5xc_azure_total_worker_nodes       = 0
-  public_ssh_key                      = file(var.ssh_public_key_file)
-  providers                           = {
-    volterra = volterra.default
+module "azure_subnet_spoke_b" {
+  source                           = "./modules/azure/subnet"
+  azure_subnet_address_prefixes    = ["172.16.24.0/24"]
+  azure_subnet_name                = format("%s-azure-subnet-spoke-b-%s", var.project_prefix, var.project_suffix)
+  azure_subnet_resource_group_name = module.azure_resource_group.resource_group["name"]
+  azure_vnet_name                  = module.azure_vnet_spoke_b.vnet["name"]
+  providers                        = {
+    azurerm = azurerm.eastus
   }
 }
 
-module "azure_vnet_spoke_b_wait_for_online" {
-  depends_on     = [module.azure_vnet_spoke_b]
-  source         = "./modules/f5xc/status/site"
-  f5xc_api_token = var.f5xc_api_token
-  f5xc_api_url   = var.f5xc_api_url
-  f5xc_namespace = var.f5xc_namespace
-  f5xc_tenant    = var.f5xc_tenant
-  f5xc_site_name = format("%s-vnet-spoke-b-%s", var.project_prefix, var.project_suffix)
-}*/
+module "azure_virtual_machine_spoke_a" {
+  source                                  = "./modules/azure/linux_virtual_machine"
+  azure_region                            = var.f5xc_azure_region
+  azure_vnet_subnet_id                    = module.azure_subnet_spoke_a.subnet["id"]
+  azure_resource_group_name               = module.azure_resource_group.resource_group["name"]
+  azure_virtual_machine_name              = format("%s-azure-vm-spoke-a-%s", var.project_prefix, var.project_suffix)
+  azure_network_interface_name            = format("%s-azure-vm-spoke-a-iface-%s", var.project_prefix, var.project_suffix)
+  azure_linux_virtual_machine_custom_data = filebase64("custom_data/spoke.sh")
+  public_ssh_key                          = file(var.ssh_public_key_file)
+  providers                               = {
+    azurerm = azurerm.eastus
+  }
+}
+
+module "azure_virtual_machine_spoke_b" {
+  source                                  = "./modules/azure/linux_virtual_machine"
+  azure_region                            = var.f5xc_azure_region
+  azure_vnet_subnet_id                    = module.azure_subnet_spoke_b.subnet["id"]
+  azure_resource_group_name               = module.azure_resource_group.resource_group["name"]
+  azure_virtual_machine_name              = format("%s-azure-vm-spoke-b-%s", var.project_prefix, var.project_suffix)
+  azure_network_interface_name            = format("%s-azure-vm-spoke-b-iface-%s", var.project_prefix, var.project_suffix)
+  azure_linux_virtual_machine_custom_data = filebase64("custom_data/spoke.sh")
+  public_ssh_key                          = file(var.ssh_public_key_file)
+  providers                               = {
+    azurerm = azurerm.eastus
+  }
+}
+
+resource "null_resource" "provision_spoke_a_traffic_generator" {
+  connection {
+    type        = var.provisioner_connection_type
+    host        = module.azure_virtual_machine_spoke_a.virtual_machine["public_ip"]
+    user        = module.azure_virtual_machine_spoke_a.virtual_machine["admin_username"]
+    private_key = file(var.ssh_private_key_file)
+  }
+
+  provisioner "file" {
+    content     = local.script_spoke_a_content
+    destination = "/tmp/script.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "ls -la /tmp",
+      "chmod +x /tmp/script.sh",
+      "sudo /tmp/script.sh &"
+    ]
+  }
+}
+
+resource "null_resource" "provision_spoke_b_traffic_generator" {
+  connection {
+    type        = var.provisioner_connection_type
+    host        = module.azure_virtual_machine_spoke_a.virtual_machine["public_ip"]
+    user        = module.azure_virtual_machine_spoke_a.virtual_machine["admin_username"]
+    private_key = file(var.ssh_private_key_file)
+  }
+
+  provisioner "file" {
+    content     = local.script_spoke_a_content
+    destination = "/tmp/script.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "ls -la /tmp",
+      "chmod +x /tmp/script.sh",
+      "sudo /tmp/script.sh &"
+    ]
+  }
+}
+
+output "azure_linux_virtual_machine" {
+  value = {
+    "spoke_a" = module.azure_virtual_machine_spoke_a
+    "spoke_b" = module.azure_virtual_machine_spoke_b
+  }
+}
 
 module "azure_single_node_multi_nic_new_vnet_hub_existing_spoke_vnets" {
   depends_on                     = [module.f5xc_azure_marketplace_agreement_hub_multi_nic]
