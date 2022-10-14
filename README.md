@@ -15,7 +15,7 @@ This repository consists of Terraform templates to bring up a F5XC Azure Vnet Hu
 ### Example Output
 
 ```bash
-test123
+
 ```
 
 ## Vnet Hub and Spoke module usage example
