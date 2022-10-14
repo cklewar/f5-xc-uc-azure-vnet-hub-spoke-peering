@@ -59,10 +59,6 @@ jobs:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub."
       - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      #- name: Azure Login
-      #  uses: azure/login@v1
-      #  with:
-      #    creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Check out repository and submodules
         uses: actions/checkout@v3
         with:
@@ -106,6 +102,7 @@ jobs:
           TF_VAR_f5xc_api_token: ${{ secrets.f5xc_api_token }}
           TF_VAR_f5xc_tenant: ${{ secrets.f5xc_tenant }}
           TF_VAR_ssh_public_key_file: ${{ secrets.SSH_PUBLIC_KEY_FILE }}
+          TF_VAR_ssh_private_key_file: ${{ secrets.SSH_PRIVATE_KEY_FILE }}
           TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -169,6 +166,7 @@ jobs:
           TF_VAR_f5xc_tenant: ${{ secrets.f5xc_tenant }}
           TF_VAR_f5xc_api_token: ${{ secrets.f5xc_api_token }}
           TF_VAR_ssh_public_key_file: ${{ secrets.SSH_PUBLIC_KEY_FILE }}
+          TF_VAR_ssh_private_key_file: ${{ secrets.SSH_PRIVATE_KEY_FILE }}
           TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -187,6 +185,7 @@ jobs:
           TF_VAR_f5xc_tenant: ${{ secrets.f5xc_tenant }}
           TF_VAR_f5xc_api_token: ${{ secrets.f5xc_api_token }}
           TF_VAR_ssh_public_key_file: ${{ secrets.SSH_PUBLIC_KEY_FILE }}
+          TF_VAR_ssh_private_key_file: ${{ secrets.SSH_PRIVATE_KEY_FILE }}
           TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -250,6 +249,7 @@ jobs:
           TF_VAR_f5xc_tenant: ${{ secrets.f5xc_tenant }}
           TF_VAR_f5xc_api_token: ${{ secrets.f5xc_api_token }}
           TF_VAR_ssh_public_key_file: ${{ secrets.SSH_PUBLIC_KEY_FILE }}
+          TF_VAR_ssh_private_key_file: ${{ secrets.SSH_PRIVATE_KEY_FILE }}
           TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
