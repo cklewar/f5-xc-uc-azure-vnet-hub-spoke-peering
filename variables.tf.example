@@ -62,12 +62,22 @@ variable "provisioner_connection_type" {
   default = "ssh"
 }
 
+variable "azure_zones" {
+  type    = list(number)
+  default = [1]
+}
+
 variable "ssh_public_key_file" {
   type    = string
 }
 
 variable "ssh_private_key_file" {
   type    = string
+}
+
+variable "owner_tag" {
+  type    = string
+  default = "c.klewar@f5.com"
 }
 
 locals {
