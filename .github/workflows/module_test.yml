@@ -29,6 +29,7 @@ jobs:
         id: setup_env
         run: |
           cp main.tf.example main.tf
+          cp variables.tf.example variables.tf
       - name: Setup Terraform
         id: setup_tf
         uses: hashicorp/setup-terraform@v2
@@ -83,7 +84,8 @@ jobs:
       - name: Setup environment
         id: setup_env
         run: |
-           cp main.tf.example main.tf
+          cp main.tf.example main.tf
+          cp variables.tf.example variables.tf
       - name: Setup Terraform
         id: setup_tf
         uses: hashicorp/setup-terraform@v2
@@ -115,6 +117,7 @@ jobs:
         id: cleanup_env
         run: |
           rm main.tf
+          rm variables.tf
       - run: echo "This job's status is ${{ job.status }}."
   f5-xc-azure-hub-spoke-peering-module-apply:
     runs-on: ubuntu-latest
@@ -145,6 +148,7 @@ jobs:
         id: setup_env
         run: |
           cp main.tf.example main.tf
+          cp variables.tf.example variables.tf
       - name: Setup Terraform
         id: setup_tf
         uses: hashicorp/setup-terraform@v2
@@ -194,6 +198,7 @@ jobs:
         id: cleanup_env
         run: |
           rm main.tf
+          rm variables.tf
       - run: echo "This job's status is ${{ job.status }}."
   f5-xc-azure-hub-spoke-peering-module-destroy:
     runs-on: ubuntu-latest
@@ -224,6 +229,7 @@ jobs:
         id: setup_env
         run: |
           cp main.tf.example main.tf
+          cp variables.tf.example variables.tf
       - name: Setup Terraform
         id: setup_tf
         uses: hashicorp/setup-terraform@v2
@@ -255,4 +261,5 @@ jobs:
         id: cleanup_env
         run: |
           rm main.tf
+          rm variables.tf
       - run: echo "This job's status is ${{ job.status }}."

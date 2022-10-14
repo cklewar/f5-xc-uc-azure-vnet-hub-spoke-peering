@@ -1,0 +1,80 @@
+variable "project_prefix" {
+  type        = string
+  description = "prefix string put in front of string"
+  default     = "f5xc"
+}
+
+variable "project_suffix" {
+  type        = string
+  description = "prefix string put at the end of string"
+  default     = "01"
+}
+
+variable "f5xc_namespace" {
+  type    = string
+  default = "system"
+}
+
+variable "f5xc_azure_region" {
+  type    = string
+  default = "eastus"
+}
+
+variable "f5xc_api_p12_file" {
+  type    = string
+}
+
+variable "f5xc_api_url" {
+  type    = string
+}
+
+variable "f5xc_tenant" {
+  type    = string
+}
+
+variable "f5xc_api_token" {
+  type    = string
+}
+
+variable "f5xc_azure_cred" {
+  type    = string
+  default = "sun-az-creds"
+}
+
+variable "azure_client_id" {
+  type    = string
+}
+
+variable "azure_client_secret" {
+  type    = string
+}
+
+variable "azure_tenant_id" {
+  type    = string
+}
+
+variable "azure_subscription_id" {
+  type    = string
+}
+
+variable "provisioner_connection_type" {
+  type    = string
+  default = "ssh"
+}
+
+variable "ssh_public_key_file" {
+  type    = string
+}
+
+variable "ssh_private_key_file" {
+  type    = string
+}
+
+locals {
+  script_spoke_a_content = templatefile("./templates/script.tftpl", {
+    "spoke_private_ip" = module.azure_virtual_machine_spoke_a.virtual_machine["private_ip"]
+  })
+  script_spoke_b_content = templatefile("./templates/script.tftpl", {
+    "spoke_private_ip" = module.azure_virtual_machine_spoke_b.virtual_machine["private_ip"]
+  })
+}
