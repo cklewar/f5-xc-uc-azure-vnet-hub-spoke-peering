@@ -279,6 +279,7 @@ module "azure_single_node_multi_nic_new_vnet_hub_existing_spoke_vnets" {
   public_ssh_key                      = file(var.ssh_public_key_file)
   providers                           = {
     volterra = volterra.default
+    azurerm  = azurerm.eastus
   }
 }
 
