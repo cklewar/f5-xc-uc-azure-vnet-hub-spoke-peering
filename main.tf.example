@@ -279,6 +279,9 @@ module "azure_single_node_multi_nic_new_vnet_hub_existing_spoke_vnets" {
   f5xc_azure_no_worker_nodes          = true
   f5xc_azure_total_worker_nodes       = 0
   public_ssh_key                      = file(var.ssh_public_key_file)
+  custom_tags                         = {
+    "Owner" = var.owner_tag
+  }
   providers                           = {
     volterra = volterra.default
     azurerm  = azurerm.eastus
