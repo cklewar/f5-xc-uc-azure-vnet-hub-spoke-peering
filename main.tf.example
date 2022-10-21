@@ -34,7 +34,7 @@ module "azure_resource_group" {
 module "azure_vnet_spoke_a" {
   source                         = "./modules/azure/virtual_network"
   azure_region                   = var.f5xc_azure_region
-  azure_vnet_name                = format("%s-spoke-a-%s", var.project_prefix, var.project_suffix)
+  azure_vnet_name                = format("%s-vnet-spoke-a-%s", var.project_prefix, var.project_suffix)
   azure_vnet_primary_ipv4        = "172.16.20.0/22"
   azure_vnet_resource_group_name = module.azure_resource_group.resource_group["name"]
   providers                      = {
