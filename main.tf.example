@@ -13,14 +13,14 @@ provider "azurerm" {
   alias           = "eastus"
 }
 
-module "f5xc_azure_marketplace_agreement_hub_multi_nic" {
+/*module "f5xc_azure_marketplace_agreement_hub_multi_nic" {
   source                = "./modules/azure/agreement"
   azure_client_id       = var.azure_client_id
   azure_client_secret   = var.azure_client_secret
   azure_tenant_id       = var.azure_tenant_id
   azure_subscription_id = var.azure_subscription_id
   f5xc_azure_ce_gw_type = "multi_nic"
-}
+}*/
 
 module "azure_resource_group" {
   source                    = "./modules/azure/resource_group"
@@ -35,7 +35,7 @@ module "azure_vnet_spoke_a" {
   source                         = "./modules/azure/virtual_network"
   azure_region                   = var.f5xc_azure_region
   azure_vnet_name                = format("%s-vnet-spoke-a-%s", var.project_prefix, var.project_suffix)
-  azure_vnet_primary_ipv4        = "172.16.20.0/22"
+  azure_vnet_primary_ipv4        = "172.16.0.0/21"
   azure_vnet_resource_group_name = module.azure_resource_group.resource_group["name"]
   providers                      = {
     azurerm = azurerm.eastus
@@ -46,7 +46,7 @@ module "azure_vnet_spoke_b" {
   source                         = "./modules/azure/virtual_network"
   azure_region                   = var.f5xc_azure_region
   azure_vnet_name                = format("%s-vnet-spoke-b-%s", var.project_prefix, var.project_suffix)
-  azure_vnet_primary_ipv4        = "172.16.24.0/22"
+  azure_vnet_primary_ipv4        = "172.16.8.0/21"
   azure_vnet_resource_group_name = module.azure_resource_group.resource_group["name"]
   providers                      = {
     azurerm = azurerm.eastus
@@ -55,8 +55,19 @@ module "azure_vnet_spoke_b" {
 
 module "azure_subnet_spoke_a" {
   source                           = "./modules/azure/subnet"
-  azure_subnet_address_prefixes    = ["172.16.20.0/24"]
+  azure_subnet_address_prefixes    = ["172.16.0.0/24"]
   azure_subnet_name                = format("%s-azure-snet-spoke-a-%s", var.project_prefix, var.project_suffix)
+  azure_subnet_resource_group_name = module.azure_resource_group.resource_group["name"]
+  azure_vnet_name                  = module.azure_vnet_spoke_a.vnet["name"]
+  providers                        = {
+    azurerm = azurerm.eastus
+  }
+}
+
+module "azure_subnet_spoke_a_outside" {
+  source                           = "./modules/azure/subnet"
+  azure_subnet_address_prefixes    = ["172.16.2.0/24"]
+  azure_subnet_name                = format("%s-azure-snet-spoke-jh-a-%s", var.project_prefix, var.project_suffix)
   azure_subnet_resource_group_name = module.azure_resource_group.resource_group["name"]
   azure_vnet_name                  = module.azure_vnet_spoke_a.vnet["name"]
   providers                        = {
@@ -66,7 +77,7 @@ module "azure_subnet_spoke_a" {
 
 module "azure_subnet_spoke_b" {
   source                           = "./modules/azure/subnet"
-  azure_subnet_address_prefixes    = ["172.16.24.0/24"]
+  azure_subnet_address_prefixes    = ["172.16.8.0/24"]
   azure_subnet_name                = format("%s-azure-snet-spoke-b-%s", var.project_prefix, var.project_suffix)
   azure_subnet_resource_group_name = module.azure_resource_group.resource_group["name"]
   azure_vnet_name                  = module.azure_vnet_spoke_b.vnet["name"]
@@ -75,43 +86,66 @@ module "azure_subnet_spoke_b" {
   }
 }
 
-module "azure_virtual_machine_spoke_a" {
-  source                       = "./modules/azure/linux_virtual_machine"
-  azure_zone                   = element(var.azure_zones, 0)
-  azure_zones                  = var.azure_zones
-  azure_region                 = var.f5xc_azure_region
-  azure_vnet_subnet_id         = module.azure_subnet_spoke_a.subnet["id"]
-  azure_resource_group_name    = module.azure_resource_group.resource_group["name"]
-  azure_virtual_machine_name   = format("%s-azure-vm-spoke-a-%s", var.project_prefix, var.project_suffix)
-  azure_network_interface_name = format("%s-azure-vm-interface-spoke-a-%s", var.project_prefix, var.project_suffix)
-  # azure_linux_virtual_machine_custom_data = filebase64("custom_data/spoke.sh")
-  public_ssh_key               = file(var.ssh_public_key_file)
-  create_public_ip             = true
-  providers                    = {
+module "azure_subnet_spoke_b_outside" {
+  source                           = "./modules/azure/subnet"
+  azure_subnet_address_prefixes    = ["172.16.9.0/24"]
+  azure_subnet_name                = format("%s-azure-snet-spoke-jh-b-%s", var.project_prefix, var.project_suffix)
+  azure_subnet_resource_group_name = module.azure_resource_group.resource_group["name"]
+  azure_vnet_name                  = module.azure_vnet_spoke_b.vnet["name"]
+  providers                        = {
     azurerm = azurerm.eastus
   }
-  custom_tags = {
-    "Owner" = var.owner_tag
+}
+
+module "azure_virtual_machine_spoke_a" {
+  source                     = "./modules/azure/linux_virtual_machine"
+  azure_zone                 = element(var.azure_zones, 0)
+  azure_zones                = var.azure_zones
+  azure_region               = var.f5xc_azure_region
+  azure_resource_group_name  = module.azure_resource_group.resource_group["name"]
+  azure_virtual_machine_name = format("%s-azure-vm-spoke-a-%s", var.project_prefix, var.project_suffix)
+  azure_network_interfaces   = [
+    {
+      name             = format("%s-azure-vm-interface-spoke-a-outside-%s", var.project_prefix, var.project_suffix)
+      tags             = { "tagA" : "tagValueA" }
+      ip_configuration = {
+        subnet_id                     = module.azure_subnet_spoke_a_outside.subnet["id"]
+        create_public_ip_address      = true
+        private_ip_address_allocation = "Dynamic"
+      }
+    }
+  ]
+  azure_linux_virtual_machine_custom_data = base64encode(local.script_client_content)
+  public_ssh_key                          = file(var.ssh_public_key_file)
+  custom_tags                             = var.custom_tags
+  providers                               = {
+    azurerm = azurerm.eastus
   }
 }
 
 module "azure_virtual_machine_spoke_b" {
-  source                       = "./modules/azure/linux_virtual_machine"
-  azure_zone                   = element(var.azure_zones, 0)
-  azure_zones                  = var.azure_zones
-  azure_region                 = var.f5xc_azure_region
-  azure_vnet_subnet_id         = module.azure_subnet_spoke_b.subnet["id"]
-  azure_resource_group_name    = module.azure_resource_group.resource_group["name"]
-  azure_virtual_machine_name   = format("%s-azure-vm-spoke-b-%s", var.project_prefix, var.project_suffix)
-  azure_network_interface_name = format("%s-azure-vm-interface-spoke-b-%s", var.project_prefix, var.project_suffix)
-  create_public_ip             = true
-  # azure_linux_virtual_machine_custom_data = filebase64("custom_data/spoke.sh")
-  public_ssh_key               = file(var.ssh_public_key_file)
-  providers                    = {
+  source                     = "./modules/azure/linux_virtual_machine"
+  azure_zone                 = element(var.azure_zones, 0)
+  azure_zones                = var.azure_zones
+  azure_region               = var.f5xc_azure_region
+  azure_resource_group_name  = module.azure_resource_group.resource_group["name"]
+  azure_virtual_machine_name = format("%s-azure-vm-spoke-b-%s", var.project_prefix, var.project_suffix)
+  azure_network_interfaces   = [
+    {
+      name             = format("%s-azure-vm-interface-spoke-b-outside-%s", var.project_prefix, var.project_suffix)
+      tags             = { "tagA" : "tagValueA" }
+      ip_configuration = {
+        subnet_id                     = module.azure_subnet_spoke_b_outside.subnet["id"]
+        create_public_ip_address      = true
+        private_ip_address_allocation = "Dynamic"
+      }
+    }
+  ]
+  azure_linux_virtual_machine_custom_data = base64encode(local.script_server_content)
+  public_ssh_key                          = file(var.ssh_public_key_file)
+  custom_tags                             = var.custom_tags
+  providers                               = {
     azurerm = azurerm.eastus
-  }
-  custom_tags = {
-    "Owner" = var.owner_tag
   }
 }
 
@@ -156,11 +190,9 @@ module "azure_security_group_spoke_a" {
       destination_address_prefix = "*"
     }
   ]
-  providers = {
+  custom_tags = var.custom_tags
+  providers   = {
     azurerm = azurerm.eastus
-  }
-  custom_tags = {
-    "Owner" = var.owner_tag
   }
 }
 
@@ -205,11 +237,9 @@ module "azure_security_group_spoke_b" {
       destination_address_prefix = "*"
     }
   ]
-  providers = {
+  custom_tags = var.custom_tags
+  providers   = {
     azurerm = azurerm.eastus
-  }
-  custom_tags = {
-    "Owner" = var.owner_tag
   }
 }
 
@@ -219,7 +249,6 @@ output "azure_virtual_machine_spokes" {
       "private_ip" = module.azure_virtual_machine_spoke_a.virtual_machine["private_ip"]
       "public_ip"  = module.azure_virtual_machine_spoke_a.virtual_machine["public_ip"]
     }
-
     "spoke_b" = {
       "private_ip" = module.azure_virtual_machine_spoke_b.virtual_machine["private_ip"]
       "public_ip"  = module.azure_virtual_machine_spoke_b.virtual_machine["public_ip"]
@@ -227,15 +256,15 @@ output "azure_virtual_machine_spokes" {
   }
 }
 
-output "script_spokes_content" {
+output "script_client_server_content" {
   value = {
-    "spoke_a" = local.script_spoke_a_content
-    "spoke_b" = local.script_spoke_b_content
+    "client" = local.script_client_content
+    "server" = local.script_server_content
   }
 }
 
 module "azure_single_node_multi_nic_new_vnet_hub_existing_spoke_vnets" {
-  depends_on                          = [module.f5xc_azure_marketplace_agreement_hub_multi_nic]
+  # depends_on                          = [module.f5xc_azure_marketplace_agreement_hub_multi_nic]
   source                              = "./modules/f5xc/site/azure"
   f5xc_api_url                        = var.f5xc_api_url
   f5xc_api_token                      = var.f5xc_api_token
@@ -255,7 +284,7 @@ module "azure_single_node_multi_nic_new_vnet_hub_existing_spoke_vnets" {
   }
   f5xc_azure_hub_spoke_vnets = [
     {
-      resource_group = module.azure_vnet_spoke_a.vnet["azure_vnet_resource_group_name"]
+      resource_group = module.azure_vnet_spoke_a.vnet["resource_group_name"]
       vnet_name      = module.azure_vnet_spoke_a.vnet.name
       auto           = true
       manual         = false
@@ -264,7 +293,7 @@ module "azure_single_node_multi_nic_new_vnet_hub_existing_spoke_vnets" {
       }
     },
     {
-      resource_group = module.azure_vnet_spoke_b.vnet["azure_vnet_resource_group_name"]
+      resource_group = module.azure_vnet_spoke_b.vnet["resource_group_name"]
       vnet_name      = module.azure_vnet_spoke_b.vnet.name
       auto           = true
       manual         = false
@@ -273,15 +302,26 @@ module "azure_single_node_multi_nic_new_vnet_hub_existing_spoke_vnets" {
       }
     }
   ]
+  f5xc_azure_vnet_static_routes = [
+    {
+      name             = format("%s-user-ip-spoke-a-%s", var.project_prefix, var.project_suffix)
+      address_prefix   = format("%s/32", data.http.host_ip.response_body)
+      route_table_name = format("rt-%s-vnet-spoke-a-%s", var.project_prefix, var.project_suffix)
+      next_hop_type    = "Internet"
+    },
+    {
+      name             = format("%s-user-ip-spoke-b-%s", var.project_prefix, var.project_suffix)
+      address_prefix   = format("%s/32", data.http.host_ip.response_body)
+      route_table_name = format("rt-%s-vnet-spoke-b-%s", var.project_prefix, var.project_suffix)
+      next_hop_type    = "Internet"
+    }
+  ]
   f5xc_azure_default_blocked_services = false
   f5xc_azure_default_ce_sw_version    = true
   f5xc_azure_default_ce_os_version    = true
   f5xc_azure_no_worker_nodes          = true
-  f5xc_azure_total_worker_nodes       = 0
   public_ssh_key                      = file(var.ssh_public_key_file)
-  custom_tags                         = {
-    "Owner" = var.owner_tag
-  }
+  custom_tags                         = var.custom_tags
   providers                           = {
     volterra = volterra.default
     azurerm  = azurerm.eastus
