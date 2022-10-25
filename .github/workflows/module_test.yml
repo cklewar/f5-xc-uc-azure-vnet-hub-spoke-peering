@@ -175,7 +175,7 @@ jobs:
           TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           # terraform import module.f5xc_azure_marketplace_agreement_app_stack.azurerm_marketplace_agreement.f5xc_azure_ce /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.MarketplaceOrdering/agreements/volterraedgeservices/offers/entcloud_voltmesh_voltstack_node/plans/freeplan_entcloud_voltmesh_voltstack_node
-          terraform import module.f5xc_azure_marketplace_agreement_hub_multi_nic.azurerm_marketplace_agreement.f5xc_azure_ce /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.MarketplaceOrdering/agreements/volterraedgeservices/offers/entcloud_voltmesh_voltstack_node/plans/freeplan_entcloud_voltmesh_voltstack_node_multinic
+          # terraform import module.f5xc_azure_marketplace_agreement_hub_multi_nic.azurerm_marketplace_agreement.f5xc_azure_ce /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.MarketplaceOrdering/agreements/volterraedgeservices/offers/entcloud_voltmesh_voltstack_node/plans/freeplan_entcloud_voltmesh_voltstack_node_multinic
           # terraform import module.f5xc_azure_marketplace_agreement_spoke_single_nic.azurerm_marketplace_agreement.f5xc_azure_ce /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.MarketplaceOrdering/agreements/volterraedgeservices/offers/volterra-node/plans/volterra-node
       - name: Terraform Apply
         id: apply
