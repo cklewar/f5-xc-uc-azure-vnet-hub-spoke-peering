@@ -77,14 +77,22 @@ variable "ssh_private_key_file" {
 
 variable "owner_tag" {
   type    = string
-  default = "c.klewar@f5.com"
+}
+
+data "http" "host_ip" {
+  url = "http://ifconfig.me"
 }
 
 locals {
-  script_spoke_a_content = templatefile("./templates/script.tftpl", {
-    "spoke_private_ip" = module.azure_virtual_machine_spoke_a.virtual_machine["private_ip"]
+  script_client_content = templatefile("./templates/client.tftpl", {
+    "server_ip" = module.azure_virtual_machine_spoke_b.virtual_machine["private_ip"]
   })
-  script_spoke_b_content = templatefile("./templates/script.tftpl", {
-    "spoke_private_ip" = module.azure_virtual_machine_spoke_b.virtual_machine["private_ip"]
-  })
+  script_server_content = templatefile("./templates/server.tftpl", {})
+
+  custom_tags = {
+    Owner                  = var.owner_tag
+    f5xc-tenant            = var.f5xc_tenant
+    f5xc-feature           = "azure-vnet-hub-spoke-peering"
+    f5xc-ves-io-creator-id = var.owner_tag
+  }
 }
