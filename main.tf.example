@@ -13,14 +13,14 @@ provider "azurerm" {
   alias           = "eastus"
 }
 
-/*module "f5xc_azure_marketplace_agreement_hub_multi_nic" {
+module "f5xc_azure_marketplace_agreement_hub_multi_nic" {
   source                = "./modules/azure/agreement"
   azure_client_id       = var.azure_client_id
   azure_client_secret   = var.azure_client_secret
   azure_tenant_id       = var.azure_tenant_id
   azure_subscription_id = var.azure_subscription_id
   f5xc_azure_ce_gw_type = "multi_nic"
-}*/
+}
 
 module "azure_resource_group" {
   source                    = "./modules/azure/resource_group"
